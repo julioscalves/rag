@@ -1,0 +1,16 @@
+[project]
+name = "rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "chonkie[all]>=0.4.1",
+    "faiss-cpu>=1.10.0",
+    "flask>=3.1.0",
+    "networkx>=3.4.2",
+    "pypdf>=5.2.0",
+    "requests>=2.32.3",
+    "sentence-transformers>=3.4.1",
+    "sqlalchemy>=2.0.37",
+]
