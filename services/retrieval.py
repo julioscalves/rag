@@ -2,6 +2,7 @@ import faiss
 import networkx as nx
 import numpy as np
 
+from sqlalchemy.orm import Session
 from sklearn.metrics.pairwise import cosine_similarity
 
 from services import embeddings
@@ -10,12 +11,12 @@ from utils.logging import logger
 
 
 class FAISSIndex:
-    def __init__(self, session, embedder):
+    def __init__(self, session: Session, embedder: embeddings.Embeddings, dimension: int):
         self.session = session
         self.embedder = embedder
         self.index = None
         self.id_mapping = []
-        self.dimension = 384
+        self.dimension = dimension
 
     def build_index(self):
         logger.info(f"building FAISS index...")
@@ -38,7 +39,7 @@ class FAISSIndex:
         self.index.add(embeddings)
         logger.info(f"FAISS index built: {self.index.ntotal} vectors")
 
-    def search(self, query: str, top_k: int = 5):
+    def search(self, query: str, top_k: int = 5) -> list:
         query_embedding = self.embedder.embed(query)
         norm = np.linalg.norm(query_embedding)
 
@@ -64,9 +65,9 @@ class FAISSIndex:
 
 
 class Graph:
-    def __init__(self, session):
+    def __init__(self, session: Session, embedder: embeddings.Embeddings):
         self.session = session
-        self.embedder = embeddings.Embedder(session)
+        self.embedder = embedder(session)
         self.graph = nx.Graph()
 
     def build_graph_index(self, similarity_threshold=0.8):

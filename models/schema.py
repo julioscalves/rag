@@ -18,7 +18,7 @@ class Document(database.Base):
         back_populates="document", cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"[{self.filename}] - {self.name}"
 
 
@@ -36,5 +36,5 @@ class Text(database.Base):
 
     document: Mapped["Document"] = relationship(back_populates="texts")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"[{self.document_id}] - [{self.id}]"

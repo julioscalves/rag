@@ -4,13 +4,14 @@ import os
 from pathlib import Path
 
 from pypdf import PdfReader
+from sqlalchemy.orm import Session
 
 from models import crud
 from utils import helpers
 from utils.logging import logger
 
 
-def parse_pdfs(session, path: str = os.getcwd() + "\\data", skip=0) -> dict:
+def parse_pdfs(session: Session, path: str = os.getcwd() + "\\data", skip: int = 0) -> dict:
     existing_hashes = crud.get_document_hashes(session)
     data = {}
 
@@ -48,7 +49,7 @@ def parse_pdfs(session, path: str = os.getcwd() + "\\data", skip=0) -> dict:
     return data
 
 
-def extract_text_from_pdf(pdf_path: str, skip=0) -> str:
+def extract_text_from_pdf(pdf_path: str, skip: int = 0) -> str:
     if not Path(pdf_path).exists():
         logger.error(f"File not found: {pdf_path}")
         return ""

@@ -1,8 +1,9 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
-from sklearn.metrics.pairwise import cosine_similarity
 from chonkie import RecursiveChunker, RecursiveRules
+from sklearn.metrics.pairwise import cosine_similarity
+from sqlalchemy.orm import Session
 
 import settings
 
@@ -12,7 +13,7 @@ from models import crud, schema
 
 
 class Embeddings:
-    def __init__(self, session):
+    def __init__(self, session: Session):
         self.session = session
         self.model = SentenceTransformer(settings.EMBEDDINGS_MODEL)
         logger.info(f"initializing the embeddings class [model: {settings.EMBEDDINGS_MODEL}]")
@@ -23,7 +24,7 @@ class Embeddings:
     def generate_embeddings(self, chunks: list):
         return self.model.encode(chunks, convert_to_numpy=True)
 
-    def generate_chunks(self, text):
+    def generate_chunks(self, text: str):
         chunker = RecursiveChunker(
             tokenizer=settings.EMBEDDINGS_MODEL,
             chunk_size=settings.CHUNK_SIZE,
@@ -70,7 +71,7 @@ class Embeddings:
             "cosine_similarity": similarity,
         }
 
-    def retrieve(self, query, top_k: int = 5) -> list:
+    def retrieve(self, query: str, top_k: int = 5) -> list:
         query_embedding = self.model.encode(query)
         active_texts = crud.get_active_texts_from_active_documents(self.session)
         results = []
