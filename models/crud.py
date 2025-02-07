@@ -31,8 +31,8 @@ def create_document(
 
 
 @helpers.measure_time
-def get_document_by_id(session: Session, id: int) -> Document:
-    return session.query(Document).filter_by(id=id).first()
+def get_document_by_id(session: Session, document_id: int) -> Document:
+    return session.query(Document).filter_by(id=document_id).first()
 
 
 @helpers.measure_time
@@ -62,9 +62,9 @@ def get_document_hashes(session: Session) -> set[str] | set:
 
 @helpers.measure_time
 def update_document_active_status(
-    session: Session, id: int, is_active: bool
+    session: Session, document_id: int, is_active: bool
 ) -> Document | None:
-    document = session.query(Document).filter_by(id=id).first()
+    document = session.query(Document).filter_by(id=document_id).first()
 
     if not document:
         return None
@@ -75,8 +75,8 @@ def update_document_active_status(
 
 
 @helpers.measure_time
-def delete_document(session: Session, id: int) -> None:
-    document = session.query(Document).filter_by(id=id).first()
+def delete_document(session: Session, document_id: int) -> None:
+    document = session.query(Document).filter_by(id=document_id).first()
 
     if document:
         session.delete(document)
@@ -105,8 +105,7 @@ def get_text_by_id(session: Session, text_id: int) -> Text:
 
 @helpers.measure_time
 def get_texts_from_document_id(session: Session, document_id: int) -> list[Text]:
-    texts = session.query(Text).filter_by(document_id=document_id).all()
-    return texts
+    return session.query(Text).filter_by(document_id=document_id).all()
 
 
 @helpers.measure_time
@@ -127,3 +126,15 @@ def get_active_texts_from_active_documents(session: Session) -> list[Text]:
 @helpers.measure_time
 def get_texts_by_hash(session: Session, hash: str) -> Text:
     return session.query(Text).filter_by(hash=hash).first()
+
+
+@helpers.measure_time
+def update_text_active_status(session: Session, text_id: int, is_active: bool) -> Text | None:
+    text = session.query(Text).filter_by(id=text_id).first()
+
+    if not text:
+        return None
+
+    text.is_active = is_active
+
+    return text
