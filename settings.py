@@ -28,6 +28,4 @@ OLLAMA_SYSTEM_PROMPT = """
                         """.strip()
 
 
-EMBEDDINGS_MODEL = (
-    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"  # "all-MiniLM-L6-v2"
-)
+EMBEDDINGS_MODEL = "intfloat/multilingual-e5-small"  # "all-MiniLM-L6-v2"
