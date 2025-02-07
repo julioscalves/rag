@@ -12,14 +12,15 @@ def create_document(
     filepath: str,
     filename: str,
     document_name: str,
+    content: str,
     is_active: bool = True,
 ) -> Document:
     document_hash = helpers.generate_hash_from_file(filepath)
-
     document = Document(
         filename=filename,
         name=document_name,
         hash=document_hash,
+        content=content,
         is_active=is_active,
     )
 
@@ -116,6 +117,11 @@ def get_texts(session: Session) -> list[Text]:
 @helpers.measure_time
 def get_texts_from_active_documents(session: Session) -> list[Text]:
     return session.query(Text).join(Document).filter(Document.is_active == True).all()
+
+
+@helpers.measure_time
+def get_active_texts_from_active_documents(session: Session) -> list[Text]:
+    return session.query(Text).join(Document).filter(Document.is_active == True).filter(Text.is_active == True).all()
 
 
 @helpers.measure_time

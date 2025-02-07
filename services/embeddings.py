@@ -7,6 +7,7 @@ from chonkie import RecursiveChunker, RecursiveRules
 import settings
 
 from utils import helpers
+from utils.logging import logger
 from models import crud, schema
 
 
@@ -14,6 +15,7 @@ class Embeddings:
     def __init__(self, session):
         self.session = session
         self.model = SentenceTransformer(settings.EMBEDDINGS_MODEL)
+        logger.info(f"initializing the embeddings class [model: {settings.EMBEDDINGS_MODEL}]")
 
     def tokenize(self, chunks: list):
         return [self.model.tokenize(chunk, return_tensors="pt") for chunk in chunks]
@@ -33,10 +35,14 @@ class Embeddings:
         return list(set([chunk.text for chunk in chunks]))
 
     def process_data(self, data: dict) -> None:
+        logger.info(f"processing data for {data.get("filename")}...")
         chunks = self.generate_chunks(data.get("content"))
+        total_chunks = len(chunks)
+        logger.info(f"[{data.get("filename")}] [{total_chunks}] chunks generated!")
+        
         insert_data = []
 
-        for chunk in range(0, len(chunks)):
+        for chunk in range(0, total_chunks):
             text_hash = helpers.generate_hash_from_string(chunks[chunk])
 
             if not crud.get_texts_by_hash(self.session, hash=text_hash):
@@ -52,6 +58,7 @@ class Embeddings:
 
         self.session.bulk_insert_mappings(schema.Text, insert_data)
         self.session.commit()
+        logger.info(f"[{data.get("filename")}] [{len(insert_data)}] embeddings saved!")
 
     @staticmethod
     def _pack_data(text: schema.Text, similarity: float) -> dict:
@@ -65,7 +72,7 @@ class Embeddings:
 
     def retrieve(self, query, top_k: int = 5) -> list:
         query_embedding = self.model.encode(query)
-        active_texts = crud.get_texts_from_active_documents(self.session)
+        active_texts = crud.get_active_texts_from_active_documents(self.session)
         results = []
 
         for text in active_texts:

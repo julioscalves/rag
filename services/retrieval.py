@@ -10,9 +10,9 @@ from utils.logging import logger
 
 
 class FAISSIndex:
-    def __init__(self, session):
+    def __init__(self, session, embedder):
         self.session = session
-        self.embedder = embeddings.Embeddings(session=session)
+        self.embedder = embedder
         self.index = None
         self.id_mapping = []
         self.dimension = 384
@@ -36,7 +36,6 @@ class FAISSIndex:
         embeddings = np.stack(embeddings).astype(np.float32)
         self.index = faiss.IndexFlatIP(self.dimension)
         self.index.add(embeddings)
-
         logger.info(f"FAISS index built: {self.index.ntotal} vectors")
 
     def search(self, query: str, top_k: int = 5):

@@ -3,11 +3,10 @@ import requests
 from flask import Flask
 from flask.globals import request
 
-from models.database import session
-from services import text_processing, embeddings
-
 import settings
 
+from models.database import session
+from services import text_processing, embeddings
 from utils.logging import logger
 
 
@@ -41,7 +40,7 @@ def question() -> dict:
     embedding_context = embeddings.retrieve(query, top_k=5)
 
     for row in embedding_context:
-        print(f"\n{row.get('content')}\n\n")
+        print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")
         prompt += f"\n\nContexto: {row['content']}\nFonte: {row['name']}"
 
     logger.info(f"[Query consolidada]: {prompt}")

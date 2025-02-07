@@ -16,6 +16,7 @@ def parse_pdfs(session, path: str = os.getcwd() + "\\data", skip=0) -> dict:
 
     for pdf_path in glob.glob(os.path.join(path, "*.pdf")):
         logger.info(f"parsing [{pdf_path}] file...")
+        
         try:
             file_hash = helpers.generate_hash_from_file(pdf_path)
 
@@ -27,7 +28,7 @@ def parse_pdfs(session, path: str = os.getcwd() + "\\data", skip=0) -> dict:
             filename = pdf_path.split("\\")[-1][:-4]
 
             document = crud.create_document(
-                session, pdf_path, filename, document_name=filename
+                session, pdf_path, filename, document_name=filename, content=content
             )
 
             data[filename] = {

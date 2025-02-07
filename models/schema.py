@@ -11,6 +11,7 @@ class Document(database.Base):
     filename: Mapped[str] = mapped_column(nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
     hash: Mapped[str] = mapped_column(nullable=False)
+    content: Mapped[str] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
 
     texts: Mapped[list["Text"]] = relationship(
@@ -30,6 +31,7 @@ class Text(database.Base):
     )
     content: Mapped[str] = mapped_column(nullable=False)
     hash: Mapped[str] = mapped_column(nullable=False, unique=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
     embedding: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
 
     document: Mapped["Document"] = relationship(back_populates="texts")
