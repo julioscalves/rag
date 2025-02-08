@@ -1,7 +1,8 @@
 import re
+
+from functools import lru_cache
 from typing import Optional
 
-import nltk
 import numpy as np
 
 from chonkie import RecursiveChunker, RecursiveRules
@@ -126,17 +127,25 @@ class Embeddings:
         return results
 
     @helpers.measure_time
+    def _get_synonyms(self, token: str) -> str:
+        synonyms = set()
+
+        for syn in wordnet.synsets(token, lang="por"):
+            for lemma in syn.lemma_names("por"):
+                synonyms.add(lemma.lower().replace("_", " "))
+
+        return synonyms
+
+    @helpers.measure_time
     def expand_query(self, query: str) -> str:
         logger.info(f"expanding query [{query}]...")
-        tokens = word_tokenize(query, language="portuguese")
-        expanded_tokens = set(token.lower() for token in tokens)
+        tokens = [
+            token.lower() for token in word_tokenize(query, language="portuguese")
+        ]
+        expanded_tokens = set(tokens)
 
         for token in tokens:
-            synonym_sets = wordnet.synsets(token, lang="por")
-
-            for synonym in synonym_sets:
-                for lemma in synonym.lemma_names("por"):
-                    expanded_tokens.add(lemma.lower().replace("_", " "))
+            expanded_tokens.update(self._get_synonyms(token))
 
         expanded_query = " ".join(expanded_tokens)
         logger.info(f"query expanded: [{expanded_query}]")

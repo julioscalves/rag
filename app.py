@@ -43,7 +43,7 @@ def question() -> dict:
 
     prompt = f"Pergunta: {query}"
 
-    embedding_context = embeddings.retrieve(query, top_k=5)
+    embedding_context = embeddings.retrieve_hybrid(query, top_k=5)
 
     for row in embedding_context:
         print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")
