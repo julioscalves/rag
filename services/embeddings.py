@@ -1,9 +1,13 @@
-from sentence_transformers import SentenceTransformer
+import nltk
 import numpy as np
 
 from chonkie import RecursiveChunker, RecursiveRules
+from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
+from nltk.tokenize import word_tokenize
+from nltk.corpus import wordnet
+from rank_bm25 import BM25Okapi
 
 import settings
 
@@ -16,7 +20,9 @@ class Embeddings:
     def __init__(self, session: Session):
         self.session = session
         self.model = SentenceTransformer(settings.EMBEDDINGS_MODEL)
-        logger.info(f"initializing the embeddings class [model: {settings.EMBEDDINGS_MODEL}]")
+        logger.info(
+            f"initializing the embeddings class [model: {settings.EMBEDDINGS_MODEL}]"
+        )
 
     def tokenize(self, chunks: list):
         return [self.model.tokenize(chunk, return_tensors="pt") for chunk in chunks]
@@ -40,7 +46,7 @@ class Embeddings:
         chunks = self.generate_chunks(data.get("content"))
         total_chunks = len(chunks)
         logger.info(f"[{data.get("filename")}] [{total_chunks}] chunks generated!")
-        
+
         insert_data = []
 
         for chunk in range(0, total_chunks):
@@ -72,6 +78,7 @@ class Embeddings:
         }
 
     def retrieve(self, query: str, top_k: int = 5) -> list:
+        logger.info(f"search the results for [{query}]")
         query_embedding = self.model.encode(query)
         active_texts = crud.get_active_texts_from_active_documents(self.session)
         results = []
@@ -84,5 +91,70 @@ class Embeddings:
         results = sorted(
             results, key=lambda x: x.get("cosine_similarity"), reverse=True
         )[:top_k]
+
+        logger.info(f"search done!")
+
+        return results
+
+    def expand_query(self, query: str) -> str:
+        logger.info(f"expanding query [{query}]...")
+        tokens = word_tokenize(query, language="portuguese")
+        expanded_tokens = set(token.lower() for token in tokens)
+
+        for token in tokens:
+            synonym_sets = wordnet.synsets(token, lang="por")
+
+            for synonym in synonym_sets:
+                for lemma in synonym.lemma_names("por"):
+                    expanded_tokens.add(lemma.lower().replace("_", " "))
+
+        expanded_query = " ".join(expanded_tokens)
+        logger.info(f"query expanded: [{expanded_query}]")
+
+        return expanded_query
+
+    def retrieve_hybrid(
+        self,
+        query: str,
+        top_k: int = 5,
+        bm25_weight: float = 0.2,
+        embedding_weight: float = 0.8,
+    ) -> list:
+        logger.info("performing hybrid search...")
+        expanded_query = self.expand_query(query)
+        active_texts = crud.get_active_texts_from_active_documents(self.session)
+        corpus = [text.content for text in active_texts]
+        tokenized_corpus = [word.split() for word in corpus]
+
+        bm25 = BM25Okapi(tokenized_corpus)
+        query_tokens = expanded_query.split()
+        bm25_scores = bm25.get_scores(query_tokens)
+
+        query_embedding = self.model.encode(query)
+        embedding_scores = []
+
+        for text in active_texts:
+            text_embedding = np.frombuffer(text.embedding, dtype=np.float32)
+            similarity = cosine_similarity([query_embedding, text_embedding])[0][0]
+            embedding_scores.append(similarity)
+
+        embedding_scores = np.array(embedding_scores)
+
+        normalized_bm25 = helpers.normalize(bm25_scores)
+        normalized_embedding = helpers.normalize(embedding_scores)
+
+        hybrid_scores = (
+            bm25_weight * normalized_bm25 + embedding_weight * normalized_embedding
+        )
+
+        results = []
+
+        for text, score in zip(active_texts, hybrid_scores):
+            results.append(self._pack_data(text, score))
+
+        results = sorted(
+            results, key=lambda x: x.get("cosine_similarity"), reverse=True
+        )[:top_k]
+        logger.info("hybrid search done!")
 
         return results

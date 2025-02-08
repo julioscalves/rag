@@ -1,3 +1,4 @@
+import nltk
 import requests
 
 from flask import Flask
@@ -20,6 +21,11 @@ def setup():
 
     database.Base.metadata.create_all(bind=database.engine)
     data = text_processing.parse_pdfs(session)
+
+    nltk.download("punkt")
+    nltk.download("punkt_tab")
+    nltk.download("omw-1.4")
+    nltk.download("wordnet")
 
     for key in data.keys():
         embeddings.process_data(data[key])

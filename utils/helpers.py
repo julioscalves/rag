@@ -1,3 +1,4 @@
+import numpy as np
 import hashlib
 import time
 
@@ -27,6 +28,13 @@ def generate_hash_from_string(string: str) -> str:
     hash_object.update(string.encode("utf-8"))
 
     return hash_object.hexdigest()
+
+
+def normalize(x):
+    if np.max(x) - np.min(x) > 0:
+        return (x - np.min(x)) / (np.max(x) - np.min(x))
+
+    return x
 
 
 def measure_time(func):

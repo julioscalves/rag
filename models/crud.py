@@ -120,7 +120,13 @@ def get_texts_from_active_documents(session: Session) -> list[Text]:
 
 @helpers.measure_time
 def get_active_texts_from_active_documents(session: Session) -> list[Text]:
-    return session.query(Text).join(Document).filter(Document.is_active == True).filter(Text.is_active == True).all()
+    return (
+        session.query(Text)
+        .join(Document)
+        .filter(Document.is_active == True)
+        .filter(Text.is_active == True)
+        .all()
+    )
 
 
 @helpers.measure_time
@@ -129,7 +135,9 @@ def get_texts_by_hash(session: Session, hash: str) -> Text:
 
 
 @helpers.measure_time
-def update_text_active_status(session: Session, text_id: int, is_active: bool) -> Text | None:
+def update_text_active_status(
+    session: Session, text_id: int, is_active: bool
+) -> Text | None:
     text = session.query(Text).filter_by(id=text_id).first()
 
     if not text:

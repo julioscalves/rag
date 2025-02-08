@@ -11,7 +11,9 @@ from utils.logging import logger
 
 
 class FAISSIndex:
-    def __init__(self, session: Session, embedder: embeddings.Embeddings, dimension: int):
+    def __init__(
+        self, session: Session, embedder: embeddings.Embeddings, dimension: int
+    ):
         self.session = session
         self.embedder = embedder
         self.index = None

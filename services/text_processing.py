@@ -11,13 +11,15 @@ from utils import helpers
 from utils.logging import logger
 
 
-def parse_pdfs(session: Session, path: str = os.getcwd() + "\\data", skip: int = 0) -> dict:
+def parse_pdfs(
+    session: Session, path: str = os.getcwd() + "\\data", skip: int = 0
+) -> dict:
     existing_hashes = crud.get_document_hashes(session)
     data = {}
 
     for pdf_path in glob.glob(os.path.join(path, "*.pdf")):
         logger.info(f"parsing [{pdf_path}] file...")
-        
+
         try:
             file_hash = helpers.generate_hash_from_file(pdf_path)
 
