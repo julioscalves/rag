@@ -41,17 +41,17 @@ def get_document_by_hash(session: Session, hash: str) -> Document:
 
 
 @helpers.measure_time
-def get_documents(session: Session) -> list[Document]:
+def get_all_documents(session: Session) -> list[Document]:
     return session.query(Document).all()
 
 
 @helpers.measure_time
-def get_active_documents(session: Session) -> list[Document]:
+def get_all_active_documents(session: Session) -> list[Document]:
     return session.query(Document).filter_by(is_active=True).all()
 
 
 @helpers.measure_time
-def get_document_hashes(session: Session) -> set[str] | set:
+def get_all_document_hashes(session: Session) -> set[str] | set:
     query = session.scalars(select(Document.hash)).all()
 
     if query:
@@ -109,7 +109,7 @@ def get_texts_from_document_id(session: Session, document_id: int) -> list[Text]
 
 
 @helpers.measure_time
-def get_texts(session: Session) -> list[Text]:
+def get_all_texts(session: Session) -> list[Text]:
     return session.query(Text).all()
 
 

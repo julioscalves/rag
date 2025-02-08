@@ -20,6 +20,12 @@ class Embeddings:
     def __init__(self, session: Session):
         self.session = session
         self.model = SentenceTransformer(settings.EMBEDDINGS_MODEL)
+        self.chunker = RecursiveChunker(
+            tokenizer=settings.EMBEDDINGS_MODEL,
+            chunk_size=settings.CHUNK_SIZE,
+            rules=RecursiveRules(),
+            min_characters_per_chunk=128,
+        )
         logger.info(
             f"initializing the embeddings class [model: {settings.EMBEDDINGS_MODEL}]"
         )
@@ -31,13 +37,7 @@ class Embeddings:
         return self.model.encode(chunks, convert_to_numpy=True)
 
     def generate_chunks(self, text: str):
-        chunker = RecursiveChunker(
-            tokenizer=settings.EMBEDDINGS_MODEL,
-            chunk_size=settings.CHUNK_SIZE,
-            rules=RecursiveRules(),
-            min_characters_per_chunk=128,
-        )
-        chunks = chunker.chunk(text)
+        chunks = self.chunker.chunk(text)
 
         return list(set([chunk.text for chunk in chunks]))
 
