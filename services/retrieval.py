@@ -5,14 +5,20 @@ import numpy as np
 from sqlalchemy.orm import Session
 from sklearn.metrics.pairwise import cosine_similarity
 
+import settings
+
 from services import embeddings
 from models import crud
+from utils.helpers import measure_time
 from utils.logging import logger
 
 
 class FAISSIndex:
     def __init__(
-        self, session: Session, embedder: embeddings.Embeddings, dimension: int
+        self,
+        session: Session,
+        embedder: embeddings.Embeddings,
+        dimension: int = settings.FAISS_DIMENSION,
     ):
         self.session = session
         self.embedder = embedder
@@ -20,6 +26,7 @@ class FAISSIndex:
         self.id_mapping = []
         self.dimension = dimension
 
+    @measure_time
     def build_index(self):
         logger.info(f"building FAISS index...")
         texts = crud.get_texts_from_active_documents(self.session)
@@ -41,8 +48,11 @@ class FAISSIndex:
         self.index.add(embeddings)
         logger.info(f"FAISS index built: {self.index.ntotal} vectors")
 
+    @measure_time
     def search(self, query: str, top_k: int = 5) -> list:
-        query_embedding = self.embedder.embed(query)
+        logger.info(f"search for [{query}] via FAISS...")
+
+        query_embedding = self.embedder.model.encode(query)
         norm = np.linalg.norm(query_embedding)
 
         if norm > 0:
@@ -62,6 +72,8 @@ class FAISSIndex:
 
             if text_object:
                 results.append(self.embedder._pack_data(text_object, float(score)))
+
+        logger.info("done!")
 
         return results
 
@@ -109,7 +121,7 @@ class Graph:
 
     def retrieve(self, query: str, top_k: int = 5, graph_expansion_steps: int = 1):
         logger.info("retrieving information for the graph network...")
-        query_embedding = self.embedder.embed(query)
+        query_embedding = self.embedder.model.encode(query)
         active_texts = crud.get_texts_from_active_documents(self.session)
         results = []
 

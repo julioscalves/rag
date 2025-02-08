@@ -7,7 +7,7 @@ from flask.globals import request
 import settings
 
 from models.database import session
-from services import text_processing, embeddings
+from services import text_processing, embeddings, retrieval
 from utils.logging import logger
 
 
