@@ -1,4 +1,5 @@
 import re
+from typing import Optional
 
 import nltk
 import numpy as np
@@ -94,15 +95,21 @@ class Embeddings:
         }
 
     @helpers.measure_time
-    def _fetch_results(self, query: str) -> list:
+    def _fetch_results(self, query: str, active_texts: Optional[list] = None) -> list:
         query_embedding = self.model.encode(query)
-        active_texts = crud.get_active_texts_from_active_documents(self.session)
-        results = []
 
-        for text in active_texts:
-            document_embeddings = np.frombuffer(text.embedding, dtype=np.float32)
-            similarity = cosine_similarity([query_embedding], [document_embeddings])
-            results.append(self._pack_data(text, similarity[0][0]))
+        if active_texts is None:
+            active_texts = crud.get_active_texts_from_active_documents(self.session)
+
+        document_embeddings = np.stack(
+            [np.frombuffer(text.embedding, dtype=np.float32) for text in active_texts]
+        )
+        similarities = cosine_similarity([query_embedding], document_embeddings)[0]
+
+        results = [
+            self._pack_data(text, similarity)
+            for text, similarity in zip(active_texts, similarities)
+        ]
 
         return results
 
@@ -147,15 +154,18 @@ class Embeddings:
         logger.info("performing hybrid search...")
         expanded_query = self.expand_query(query)
         active_texts = crud.get_active_texts_from_active_documents(self.session)
+
         corpus = [text.content for text in active_texts]
         tokenized_corpus = [word.split() for word in corpus]
-
         bm25 = BM25Okapi(tokenized_corpus)
         query_tokens = expanded_query.split()
         bm25_scores = bm25.get_scores(query_tokens)
 
         embedding_scores = np.array(
-            [result.get("cosine_similarity") for result in self._fetch_results(query)]
+            [
+                result.get("cosine_similarity")
+                for result in self._fetch_results(query, active_texts)
+            ]
         )
 
         normalized_bm25 = helpers.normalize(bm25_scores)
