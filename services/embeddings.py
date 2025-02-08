@@ -38,7 +38,6 @@ class Embeddings:
 
     def generate_chunks(self, text: str):
         chunks = self.chunker.chunk(text)
-
         return list(set([chunk.text for chunk in chunks]))
 
     def process_data(self, data: dict) -> None:
