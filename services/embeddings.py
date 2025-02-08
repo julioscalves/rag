@@ -94,8 +94,7 @@ class Embeddings:
         }
 
     @helpers.measure_time
-    def retrieve(self, query: str, top_k: int = 5) -> list:
-        logger.info(f"search the results for [{query}]")
+    def _fetch_results(self, query: str) -> list:
         query_embedding = self.model.encode(query)
         active_texts = crud.get_active_texts_from_active_documents(self.session)
         results = []
@@ -105,6 +104,12 @@ class Embeddings:
             similarity = cosine_similarity([query_embedding], [document_embeddings])
             results.append(self._pack_data(text, similarity[0][0]))
 
+        return results
+
+    @helpers.measure_time
+    def retrieve(self, query: str, top_k: int = 5) -> list:
+        logger.info(f"search the results for [{query}]")
+        results = self._fetch_results(query)
         results = sorted(
             results, key=lambda x: x.get("cosine_similarity"), reverse=True
         )[:top_k]
@@ -149,15 +154,9 @@ class Embeddings:
         query_tokens = expanded_query.split()
         bm25_scores = bm25.get_scores(query_tokens)
 
-        query_embedding = self.model.encode(query)
-        embedding_scores = []
-
-        for text in active_texts:
-            text_embedding = np.frombuffer(text.embedding, dtype=np.float32)
-            similarity = cosine_similarity([query_embedding, text_embedding])[0][0]
-            embedding_scores.append(similarity)
-
-        embedding_scores = np.array(embedding_scores)
+        embedding_scores = np.array(
+            [result.get("cosine_similarity") for result in self._fetch_results(query)]
+        )
 
         normalized_bm25 = helpers.normalize(bm25_scores)
         normalized_embedding = helpers.normalize(embedding_scores)
