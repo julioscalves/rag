@@ -140,6 +140,11 @@ def get_all_text_hashes_in_list(session: Session, hash_list: list[str]) -> list[
 
 
 @helpers.measure_time
+def get_texts_in_id_list(session: Session, id_list: list[int]) -> list[Text]:
+    return session.query(Text).filter(Text.id.in_(id_list)).all()
+
+
+@helpers.measure_time
 def update_text_active_status(
     session: Session, text_id: int, is_active: bool
 ) -> Text | None:

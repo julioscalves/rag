@@ -9,7 +9,7 @@ import settings
 
 from services import embeddings
 from models import crud
-from utils.helpers import measure_time
+from utils import helpers
 from utils.logging import logger
 
 
@@ -22,52 +22,62 @@ class FAISSIndex:
     ):
         self.session = session
         self.embedder = embedder
-        self.index = None
-        self.id_mapping = []
         self.dimension = dimension
+        self.index = None
 
-    @measure_time
+    @helpers.measure_time
     def build_index(self):
         logger.info(f"building FAISS index...")
         texts = crud.get_texts_from_active_documents(self.session)
         embeddings = []
-        self.id_mapping = []
+        document_ids = []
 
         for text in texts:
             embedding = np.frombuffer(text.embedding, dtype=np.float32)
             norm = np.linalg.norm(embedding)
 
-            if norm > 0:
+            if norm > 1e-6:
                 embedding = embedding / norm
 
             embeddings.append(embedding)
-            self.id_mapping.append(text.id)
+            document_ids.append(text.id)
 
-        embeddings = np.stack(embeddings).astype(np.float32)
-        self.index = faiss.IndexFlatIP(self.dimension)
-        self.index.add(embeddings)
+        embeddings = np.vstack(embeddings).astype(np.float32)
+
+        index_flat = faiss.IndexFlatIP(self.dimension)
+        self.index = faiss.IndexIDMap(index_flat)
+        id_array = np.array(document_ids, dtype=np.int64)
+        self.index.add_with_ids(embeddings, id_array)
+
         logger.info(f"FAISS index built: {self.index.ntotal} vectors")
 
-    @measure_time
+    @helpers.measure_time
     def search(self, query: str, top_k: int = 5) -> list:
         logger.info(f"search for [{query}] via FAISS...")
 
         query_embedding = self.embedder.model.encode(query)
         norm = np.linalg.norm(query_embedding)
 
-        if norm > 0:
+        if norm > 1e-6:
             query_embedding = query_embedding / norm
 
         query_embedding = np.expand_dims(query_embedding, axis=0).astype(np.float32)
-        distances, indices = self.index.search(query_embedding, top_k)
+        distances, retrieved_ids = self.index.search(query_embedding, top_k)
+
+        valid_ids = [
+            int(document_id) for document_id in retrieved_ids[0] if document_id != -1
+        ]
+        text_objects = {
+            text.id: text for text in crud.get_texts_in_id_list(self.session, valid_ids)
+        }
+
         results = []
 
-        for index, score in zip(indices[0], distances[0]):
-            if index == -1:
+        for document_id, score in zip(retrieved_ids[0], distances[0]):
+            if document_id == -1:
                 continue
 
-            text_id = self.id_mapping[index]
-            text_object = crud.get_text_by_id(self.session, text_id)
+            text_object = text_objects.get(document_id)
 
             if text_object:
                 results.append(self.embedder._pack_data(text_object, float(score)))
@@ -80,10 +90,11 @@ class FAISSIndex:
 class Graph:
     def __init__(self, session: Session, embedder: embeddings.Embeddings):
         self.session = session
-        self.embedder = embedder(session)
+        self.embedder = embedder
         self.graph = nx.Graph()
 
-    def build_graph_index(self, similarity_threshold=0.8):
+    @helpers.measure_time
+    def build_graph_network(self, similarity_threshold=0.8):
         logger.info("assembling graph network...")
         active_texts = crud.get_texts_from_active_documents(self.session)
         embeddings = []
@@ -118,6 +129,7 @@ class Graph:
             f"graph built with [{self.graph.number_of_nodes()}] nodes and [{self.graph.number_of_edges()}] edges!"
         )
 
+    @helpers.measure_time
     def retrieve(self, query: str, top_k: int = 5, graph_expansion_steps: int = 1):
         logger.info("retrieving information for the graph network...")
         query_embedding = self.embedder.model.encode(query)

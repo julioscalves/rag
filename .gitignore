@@ -20,3 +20,6 @@ app.log.*
 *.db
 *.db-shm
 *.db-wal
+
+# API calls
+*.api
