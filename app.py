@@ -50,7 +50,7 @@ def question() -> dict:
 
     prompt = f"Pergunta: {query}"
 
-    embedding_context = embeddings.retrieve(query)
+    embedding_context = embedding.retrieve(query)
     faiss_context = faiss_index.search(query)
     graph_context = graph.retrieve(query)
 

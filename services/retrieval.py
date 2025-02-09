@@ -97,8 +97,13 @@ class Graph:
     def build_graph_network(self, similarity_threshold=0.8):
         logger.info("assembling graph network...")
         active_texts = crud.get_texts_from_active_documents(self.session)
-        embeddings = []
+
+        if not active_texts:
+            logger.warning("no texts available to build the graph network!")
+            return
+
         node_ids = []
+        embeddings = []
 
         for text in active_texts:
             embedding = np.frombuffer(text.embedding, dtype=np.float32)
@@ -112,18 +117,16 @@ class Graph:
                 name=text.document.name,
             )
 
-        if not embeddings:
-            logger.warning("no texts available to build the graph network!")
-
         embeddings_array = np.stack(embeddings)
         similarity_matrix = cosine_similarity(embeddings_array)
-        num_texts = len(node_ids)
 
-        for i in range(num_texts):
-            for j in range(i + 1, num_texts):
-                similarity = similarity_matrix[i, j]
-                if similarity >= similarity_threshold:
-                    self.graph.add_edge(node_ids[i], node_ids[j], weight=similarity)
+        i_upper, j_upper = np.triu_indices(len(node_ids), k=1)
+        mask = similarity_matrix[i_upper, j_upper] >= similarity_threshold
+
+        for i, j in zip(i_upper[mask], j_upper[mask]):
+            self.graph.add_edge(
+                node_ids[i], node_ids[j], weight=similarity_matrix[i, j]
+            )
 
         logger.info(
             f"graph built with [{self.graph.number_of_nodes()}] nodes and [{self.graph.number_of_edges()}] edges!"
