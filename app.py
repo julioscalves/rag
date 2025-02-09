@@ -1,3 +1,4 @@
+import nltk
 import requests
 
 from flask import Flask
@@ -6,12 +7,13 @@ from flask.globals import request
 import settings
 
 from models.database import session
-from services import text_processing, embeddings
+from services import text_processing, embeddings, retrieval
 from utils.logging import logger
 
 
 app = Flask(__name__)
-embeddings = embeddings.Embeddings(session=session)
+embedding = embeddings.Embeddings(session=session)
+wordnet_syn = embeddings.WordnetSyn(lang="por")
 
 
 def setup():
@@ -21,8 +23,15 @@ def setup():
     database.Base.metadata.create_all(bind=database.engine)
     data = text_processing.parse_pdfs(session)
 
+    nltk.download("punkt")
+    nltk.download("punkt_tab")
+    nltk.download("omw-1.4")
+    nltk.download("wordnet")
+
     for key in data.keys():
-        embeddings.process_data(data[key])
+        embedding.process_data(data[key])
+
+    wordnet_syn._precompute_mapping()
 
 
 setup()
@@ -37,7 +46,7 @@ def question() -> dict:
 
     prompt = f"Pergunta: {query}"
 
-    embedding_context = embeddings.retrieve(query, top_k=5)
+    embedding_context = embedding.retrieve(query, top_k=5)
 
     for row in embedding_context:
         print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")

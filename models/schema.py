@@ -10,7 +10,7 @@ class Document(database.Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     filename: Mapped[str] = mapped_column(nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
-    hash: Mapped[str] = mapped_column(nullable=False)
+    hash: Mapped[str] = mapped_column(nullable=False, unique=True)
     content: Mapped[str] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
 

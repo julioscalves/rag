@@ -11,10 +11,13 @@ LOGGING_CONFIG = {
     },
     "handlers": {
         "file": {
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.TimedRotatingFileHandler",
             "filename": "app.log",
+            "when": "midnight",
+            "backupCount": 30,
             "formatter": "default",
             "level": logging.DEBUG,
+            "encoding": "utf-8",
         }
     },
     "loggers": {
