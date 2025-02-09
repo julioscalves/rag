@@ -31,6 +31,8 @@ def setup():
     for key in data.keys():
         embedding.process_data(data[key])
 
+    wordnet_syn._precompute_mapping()
+
 
 setup()
 
@@ -44,9 +46,7 @@ def question() -> dict:
 
     prompt = f"Pergunta: {query}"
 
-    embedding_context = embedding.retrieve_hybrid(
-        query, wordnetsyn_instance=wordnet_syn, top_k=5
-    )
+    embedding_context = embedding.retrieve(query, top_k=5)
 
     for row in embedding_context:
         print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")

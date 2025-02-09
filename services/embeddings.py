@@ -26,9 +26,12 @@ class WordnetSyn:
     synonym search.
     """
 
-    def __init__(self, lang="por"):
+    def __init__(self, lang: str = "por", preload: bool = True):
         self.lang = lang
         self.syn_mapping = defaultdict(set)
+
+        if preload:
+            self._precompute_mapping()
 
     @helpers.measure_time
     def _precompute_mapping(self):

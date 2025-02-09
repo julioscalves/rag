@@ -63,7 +63,6 @@ class FAISSIndex:
         results = []
 
         for index, score in zip(indices[0], distances[0]):
-
             if index == -1:
                 continue
 
