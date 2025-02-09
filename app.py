@@ -12,7 +12,8 @@ from utils.logging import logger
 
 
 app = Flask(__name__)
-embeddings = embeddings.Embeddings(session=session)
+embedding = embeddings.Embeddings(session=session)
+wordnet_syn = embeddings.WordnetSyn(lang="por")
 
 
 def setup():
@@ -28,7 +29,7 @@ def setup():
     nltk.download("wordnet")
 
     for key in data.keys():
-        embeddings.process_data(data[key])
+        embedding.process_data(data[key])
 
 
 setup()
@@ -43,7 +44,9 @@ def question() -> dict:
 
     prompt = f"Pergunta: {query}"
 
-    embedding_context = embeddings.retrieve_hybrid(query, top_k=5)
+    embedding_context = embedding.retrieve_hybrid(
+        query, wordnetsyn_instance=wordnet_syn, top_k=5
+    )
 
     for row in embedding_context:
         print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")

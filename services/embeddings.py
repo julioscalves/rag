@@ -1,6 +1,6 @@
 import re
 
-from functools import lru_cache
+from collections import defaultdict
 from typing import Optional
 
 import numpy as np
@@ -20,6 +20,34 @@ from utils.logging import logger
 from models import crud, schema
 
 
+class WordnetSyn:
+    """
+    This helper class preloads Wordnet's synsets, speeding up the
+    synonym search.
+    """
+
+    def __init__(self, lang="por"):
+        self.lang = lang
+        self.syn_mapping = defaultdict(set)
+
+    @helpers.measure_time
+    def _precompute_mapping(self):
+        for synset in wordnet.all_synsets(lang=self.lang):
+            lemmas = synset.lemma_names(self.lang)
+            processed_lemmas = {lemma.lower().replace("_", " ") for lemma in lemmas}
+
+            for lemma in lemmas:
+                self.syn_mapping[lemma].update(processed_lemmas)
+
+        self.syn_mapping = {
+            lemma: frozenset(synonyms) for lemma, synonyms in self.syn_mapping.items()
+        }
+
+    @helpers.measure_time
+    def get_synonyms(self, token: str) -> frozenset:
+        return self.syn_mapping.get(token, frozenset())
+
+
 class Embeddings:
     def __init__(self, session: Session):
         self.session = session
@@ -30,6 +58,7 @@ class Embeddings:
             rules=RecursiveRules(),
             min_characters_per_chunk=settings.MIN_CHARS_PER_CHUNK,
         )
+        self.wordnet_syn = None
         logger.info(
             f"initializing the embeddings class [model: {settings.EMBEDDINGS_MODEL}]"
         )
@@ -128,13 +157,7 @@ class Embeddings:
 
     @helpers.measure_time
     def _get_synonyms(self, token: str) -> str:
-        synonyms = set()
-
-        for syn in wordnet.synsets(token, lang="por"):
-            for lemma in syn.lemma_names("por"):
-                synonyms.add(lemma.lower().replace("_", " "))
-
-        return synonyms
+        return self.wordnet_syn.get_synonyms(token)
 
     @helpers.measure_time
     def expand_query(self, query: str) -> str:
@@ -156,11 +179,16 @@ class Embeddings:
     def retrieve_hybrid(
         self,
         query: str,
+        wordnetsyn_instance: WordnetSyn,
         top_k: int = 5,
         bm25_weight: float = settings.BM25_SEARCH_WEIGHT,
         embedding_weight: float = settings.EMBEDDINGS_SEARCH_WEIGHT,
     ) -> list:
         logger.info("performing hybrid search...")
+
+        if wordnetsyn_instance:
+            self.wordnet_syn = wordnetsyn_instance
+
         expanded_query = self.expand_query(query)
         active_texts = crud.get_active_texts_from_active_documents(self.session)
 
