@@ -14,6 +14,7 @@ wheels/
 
 # Logs
 app.log
+app.log.*
 
 # Database
 *.db
