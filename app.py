@@ -12,29 +12,27 @@ from utils.logging import logger
 
 
 app = Flask(__name__)
+
+nltk.download("wordnet")
+nltk.download("punkt")
+nltk.download("punkt_tab")
+nltk.download("omw-1.4")
+
 embedding = embeddings.Embeddings(session=session)
 wordnet_syn = embeddings.WordnetSyn(lang="por")
 
 
-def setup():
+def _setup():
     from models import schema
     from models import database
 
     database.Base.metadata.create_all(bind=database.engine)
     data = text_processing.parse_pdfs(session)
 
-    nltk.download("punkt")
-    nltk.download("punkt_tab")
-    nltk.download("omw-1.4")
-    nltk.download("wordnet")
-
     for key in data.keys():
         embedding.process_data(data[key])
 
     wordnet_syn._precompute_mapping()
-
-
-setup()
 
 
 @app.route("/question", methods=["POST"])
@@ -72,4 +70,4 @@ def question() -> dict:
 
 
 if __name__ == "__main__":
-    setup()
+    _setup()
