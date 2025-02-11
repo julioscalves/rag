@@ -20,8 +20,8 @@ nltk.download("omw-1.4")
 
 embedding = embeddings.Embeddings(session=session)
 wordnet_syn = embeddings.WordnetSyn(lang="por")
-faiss_index = retrieval.FAISSIndex(session=session, embedder=embedding)
-graph = retrieval.Graph(session, embedder=embedding)
+#faiss_index = retrieval.FAISSIndex(session=session, embedder=embedding)
+#graph = retrieval.Graph(session, embedder=embedding)
 
 
 def _setup():
@@ -35,9 +35,10 @@ def _setup():
         embedding.process_data(data[key])
 
     wordnet_syn._precompute_mapping()
-    faiss_index.build_index()
-    graph.build_graph_network()
+    #faiss_index.build_index()
+    #graph.build_graph_network()
 
+_setup()
 
 @app.route("/question", methods=["POST"])
 def question() -> dict:
@@ -48,11 +49,11 @@ def question() -> dict:
 
     prompt = f"Pergunta: {query}"
 
-    embedding_context = embedding.retrieve(query)
-    faiss_context = faiss_index.search(query)
-    graph_context = graph.retrieve(query)
+    context = embedding.retrieve(query, top_k=5, rerank=True)
+    #context = faiss_index.search(query, top_k=20, rerank=True)
+    #context = graph.retrieve(query)
 
-    for row in embedding_context:
+    for row in context:
         print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")
         prompt += f"\n\nContexto: {row['content']}\nFonte: {row['name']}"
 
@@ -74,6 +75,3 @@ def question() -> dict:
 
     return {"response": response_text}
 
-
-if __name__ == "__main__":
-    _setup()

@@ -1,7 +1,9 @@
 import faiss
+import heapq
 import networkx as nx
 import numpy as np
 
+from operator import itemgetter
 from sqlalchemy.orm import Session
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -52,7 +54,27 @@ class FAISSIndex:
         logger.info(f"FAISS index built: {self.index.ntotal} vectors")
 
     @helpers.measure_time
-    def search(self, query: str, top_k: int = 5) -> list:
+    def _rerank(self, query: str, results: list, rerank_top_k: int = 5, threshold: float = -5.0) -> list:
+        logger.info("reranking results...")
+        filtered_results = []
+
+        query_document_pairs = [(query, result["content"]) for result in results]
+        scores = self.embedder.cross_encoder.predict(query_document_pairs)
+        
+        for result, score in zip(results, scores):
+            result["rerank_score"] = score
+
+            if score >= threshold:
+                filtered_results.append(result)
+
+        final_results = heapq.nlargest(rerank_top_k, filtered_results, key=itemgetter("rerank_score"))
+        logger.info("done!")
+
+        return final_results
+
+
+    @helpers.measure_time
+    def search(self, query: str, top_k: int = 5, rerank: bool = False, rerank_top_k: int = 5) -> list:
         logger.info(f"search for [{query}] via FAISS...")
 
         query_embedding = self.embedder.model.encode(query)
@@ -81,6 +103,9 @@ class FAISSIndex:
 
             if text_object:
                 results.append(self.embedder._pack_data(text_object, float(score)))
+
+        if rerank:
+            results = self._rerank(query, results, rerank_top_k)
 
         logger.info("done!")
 
