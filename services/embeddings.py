@@ -204,7 +204,8 @@ class Embeddings:
         top_k: int = 5,
         bm25_weight: float = settings.BM25_SEARCH_WEIGHT,
         embedding_weight: float = settings.EMBEDDINGS_SEARCH_WEIGHT,
-        rerank: bool = False
+        rerank: bool = False,
+        rerank_top_k: int = 5
     ) -> list:
         logger.info("performing hybrid search...")
 
@@ -244,7 +245,7 @@ class Embeddings:
         )[:top_k]
 
         if rerank:
-            results = self._rerank_results(query, results)
+            results = self._rerank_results(query, results)[:rerank_top_k]
 
         logger.info("hybrid search done!")
 
