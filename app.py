@@ -14,8 +14,8 @@ from utils.logging import logger
 app = Flask(__name__)
 embedding = embeddings.Embeddings(session=session)
 wordnet_syn = embeddings.WordnetSyn(lang="por")
-faiss_index = retrieval.FAISSIndex(session=session, embedder=embedding)
-graph = retrieval.Graph(session, embedder=embedding)
+#faiss_index = retrieval.FAISSIndex(session=session, embedder=embedding)
+#graph = retrieval.Graph(session, embedder=embedding)
 
 
 def setup():
@@ -34,8 +34,8 @@ def setup():
         embedding.process_data(data[key])
 
     wordnet_syn._precompute_mapping()
-    faiss_index.build_index()
-    graph.build_graph_network()
+    #faiss_index.build_index()
+    #graph.build_graph_network()
 
 
 setup()
@@ -50,9 +50,9 @@ def question() -> dict:
 
     prompt = f"Pergunta: {query}"
 
-    embedding_context = embedding.retrieve(query)
-    faiss_context = faiss_index.search(query)
-    graph_context = graph.retrieve(query)
+    embedding_context = embedding.retrieve(query, top_k=5, rerank=False)
+    #faiss_context = faiss_index.search(query)
+    #graph_context = graph.retrieve(query)
 
     for row in embedding_context:
         print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")

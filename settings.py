@@ -7,6 +7,7 @@ ENABLE_PERF_LOGGING = True
 BM25_SEARCH_WEIGHT = 0.2
 EMBEDDINGS_SEARCH_WEIGHT = 0.8
 
+CROSSENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 EMBEDDINGS_MODEL = "intfloat/multilingual-e5-small"  # "all-MiniLM-L6-v2"
 FAISS_DIMENSION = 384  # Property from the embedding model
 MIN_CHARS_PER_CHUNK = 128

@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 
 from chonkie import RecursiveChunker, RecursiveRules
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
 from nltk.tokenize import word_tokenize
@@ -55,6 +55,7 @@ class Embeddings:
     def __init__(self, session: Session):
         self.session = session
         self.model = SentenceTransformer(settings.EMBEDDINGS_MODEL)
+        self.cross_encoder = CrossEncoder(settings.CROSSENCODER_MODEL)
         self.chunker = RecursiveChunker(
             tokenizer=settings.EMBEDDINGS_MODEL,
             chunk_size=settings.CHUNK_SIZE,
@@ -66,20 +67,20 @@ class Embeddings:
             f"initializing the embeddings class [model: {settings.EMBEDDINGS_MODEL}]"
         )
 
-    def tokenize(self, chunks: list):
+    def tokenize(self, chunks: list) -> list:
         return [self.model.tokenize(chunk, return_tensors="pt") for chunk in chunks]
 
     def generate_embeddings(self, chunks: list):
         return self.model.encode(chunks, convert_to_numpy=True)
 
-    def _remove_meaningless_chunks(self, chunks: list[str]) -> str:
+    def _remove_meaningless_chunks(self, chunks: list[str]) -> list[str]:
         filtered_chunks = [
             string for string in chunks if re.search(r"[a-zA-Z0-9]", string)
         ]
-        logger.info(f"[{len(filtered_chunks) - len(chunks)}] chunks filtered out")
+        logger.info(f"[{len(chunks) - len(filtered_chunks)}] chunks filtered out")
         return filtered_chunks
 
-    def generate_chunks(self, text: str):
+    def generate_chunks(self, text: str) -> list:
         chunks = list(set([chunk.text for chunk in self.chunker.chunk(text)]))
         chunks = self._remove_meaningless_chunks(chunks)
 
@@ -145,14 +146,33 @@ class Embeddings:
         ]
 
         return results
+    
+    @helpers.measure_time
+    def _rerank_results(self, query: str, results: list, rerank_top_k: int = 5, threshold: float = 0.5) -> list:
+        logger.info("reranking results...")
+        if not results:
+            return results
+        
+        query_document_pairs = [(query, result["content"]) for result in results]
+        scores = self.cross_encoder.predict(query_document_pairs)
+
+        for result, score in zip(results, scores):
+            result["rerank_score"] = score
+
+        filtered_results = [result for result in results if result["rerank_score"] >= threshold]
+        logger.info("done!")
+        return sorted(filtered_results, key=lambda x: x["rerank_score"], reverse=True)[:rerank_top_k]
 
     @helpers.measure_time
-    def retrieve(self, query: str, top_k: int = 5) -> list:
+    def retrieve(self, query: str, top_k: int = 5, rerank: bool = False) -> list:
         logger.info(f"search the results for [{query}]")
         results = self._fetch_results(query)
         results = sorted(
             results, key=lambda x: x.get("cosine_similarity"), reverse=True
         )[:top_k]
+        
+        if rerank:
+            results = self._rerank_results(query, results)
 
         logger.info(f"search done!")
 
@@ -186,6 +206,7 @@ class Embeddings:
         top_k: int = 5,
         bm25_weight: float = settings.BM25_SEARCH_WEIGHT,
         embedding_weight: float = settings.EMBEDDINGS_SEARCH_WEIGHT,
+        rerank: bool = False
     ) -> list:
         logger.info("performing hybrid search...")
 
@@ -223,6 +244,10 @@ class Embeddings:
         results = sorted(
             results, key=lambda x: x.get("cosine_similarity"), reverse=True
         )[:top_k]
+
+        if rerank:
+            results = self._rerank_results(query, results)
+
         logger.info("hybrid search done!")
 
         return results
