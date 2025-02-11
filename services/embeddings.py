@@ -148,11 +148,9 @@ class Embeddings:
         return results
     
     @helpers.measure_time
-    def _rerank_results(self, query: str, results: list, rerank_top_k: int = 5, threshold: float = 0.5) -> list:
+    def _rerank_results(self, query: str, results: list, rerank_top_k: int = 5, threshold: float = -5.0) -> list:
         logger.info("reranking results...")
-        if not results:
-            return results
-        
+       
         query_document_pairs = [(query, result["content"]) for result in results]
         scores = self.cross_encoder.predict(query_document_pairs)
 
