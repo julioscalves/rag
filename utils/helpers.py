@@ -40,7 +40,6 @@ def normalize(x):
 def measure_time(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-
         if not settings.ENABLE_PERF_LOGGING:
             return func(*args, **kwargs)
 

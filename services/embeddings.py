@@ -87,10 +87,10 @@ class Embeddings:
         return chunks
 
     def process_data(self, data: dict) -> None:
-        logger.info(f"processing data for {data.get("filename")}...")
+        logger.info(f"processing data for {data.get('filename')}...")
         chunks = self.generate_chunks(data.get("content"))
         total_chunks = len(chunks)
-        logger.info(f"[{data.get("filename")}] [{total_chunks}] chunks generated!")
+        logger.info(f"[{data.get('filename')}] [{total_chunks}] chunks generated!")
 
         chunk_hashes = [helpers.generate_hash_from_string(chunk) for chunk in chunks]
         existing_hashes = crud.get_all_text_hashes_in_list(self.session, chunk_hashes)
@@ -116,7 +116,7 @@ class Embeddings:
             self.session.bulk_insert_mappings(schema.Text, insert_data)
             self.session.commit()
 
-        logger.info(f"[{data.get("filename")}] [{len(insert_data)}] embeddings saved!")
+        logger.info(f"[{data.get('filename')}] [{len(insert_data)}] embeddings saved!")
 
     @staticmethod
     def _pack_data(text: schema.Text, similarity: float) -> dict:
@@ -146,20 +146,26 @@ class Embeddings:
         ]
 
         return results
-    
+
     @helpers.measure_time
-    def _rerank_results(self, query: str, results: list, rerank_top_k: int = 5, threshold: float = -5.0) -> list:
+    def _rerank_results(
+        self, query: str, results: list, rerank_top_k: int = 5, threshold: float = -5.0
+    ) -> list:
         logger.info("reranking results...")
-       
+
         query_document_pairs = [(query, result["content"]) for result in results]
         scores = self.cross_encoder.predict(query_document_pairs)
 
         for result, score in zip(results, scores):
             result["rerank_score"] = score
 
-        filtered_results = [result for result in results if result["rerank_score"] >= threshold]
+        filtered_results = [
+            result for result in results if result["rerank_score"] >= threshold
+        ]
         logger.info("done!")
-        return sorted(filtered_results, key=lambda x: x["rerank_score"], reverse=True)[:rerank_top_k]
+        return sorted(filtered_results, key=lambda x: x["rerank_score"], reverse=True)[
+            :rerank_top_k
+        ]
 
     @helpers.measure_time
     def retrieve(self, query: str, top_k: int = 5, rerank: bool = False) -> list:
@@ -168,11 +174,11 @@ class Embeddings:
         results = sorted(
             results, key=lambda x: x.get("cosine_similarity"), reverse=True
         )[:top_k]
-        
+
         if rerank:
             results = self._rerank_results(query, results)
 
-        logger.info(f"search done!")
+        logger.info("search done!")
 
         return results
 
@@ -205,7 +211,7 @@ class Embeddings:
         bm25_weight: float = settings.BM25_SEARCH_WEIGHT,
         embedding_weight: float = settings.EMBEDDINGS_SEARCH_WEIGHT,
         rerank: bool = False,
-        rerank_top_k: int = 5
+        rerank_top_k: int = 5,
     ) -> list:
         logger.info("performing hybrid search...")
 
