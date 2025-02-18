@@ -58,7 +58,7 @@ def question() -> dict:
 
     for row in context:
         print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")
-        prompt += f"\n\nContexto: {row['content']}\nFonte: {row['name']}"
+        prompt += f"\n\n[CONTEXTO]: {row['content']}\nFonte: {row['name']}"
 
     logger.info(f"[Query consolidada]: {prompt}")
 

@@ -16,7 +16,7 @@ OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "qwen2.5:3b"
 OLLAMA_PARAMETERS = {
     "temperature": 0.70,
-    "num_ctx": 8192,
+    "num_ctx": 4096,
     "top_k": 30,
     "top_p": 0.8,
     "mirostat": 2,
@@ -31,9 +31,6 @@ OLLAMA_SYSTEM_PROMPT = """
                         resposta. Nesse sentido, sempre avalie a relevância das informações fornecidas durante a formulação
                         da sua resposta.
 
-                        A sua resposta deve considerar o contexto como parte do seu conhecimento interno.
-
                         NÃO formule opinião sobre qualquer membro da comunidade acadêmica.
                         NÃO realize comentários de cunho político, religioso ou que afete convicções pessoais.
-                        NÃO realize operações aritméticas nem a título prático, nem a título demonstrativo.
                         """.strip()
