@@ -8,6 +8,7 @@ dependencies = [
     "chonkie[all]>=0.4.1",
     "faiss-cpu>=1.10.0",
     "flask>=3.1.0",
+    "flask-cors>=5.0.0",
     "networkx>=3.4.2",
     "nltk>=3.9.1",
     "pypdf>=5.2.0",

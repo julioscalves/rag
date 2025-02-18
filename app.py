@@ -3,6 +3,7 @@ import requests
 
 from flask import Flask
 from flask.globals import request
+from flask_cors import CORS
 
 import settings
 
@@ -12,6 +13,7 @@ from utils.logging import logger
 
 
 app = Flask(__name__)
+CORS(app, origins="*")
 
 nltk.download("wordnet")
 nltk.download("punkt")
