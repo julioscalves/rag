@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models.schema import Document, Text
+from models.schema import Document, Text, Chat, Message
 
 from utils import helpers
 
@@ -156,3 +156,40 @@ def update_text_active_status(
     text.is_active = is_active
 
     return text
+
+
+def get_chat_by_string_id(session: Session, chat_id: str):
+    return session.query(Chat).filter_by(chat_id=chat_id).first()
+
+
+def get_chat_by_id(session: Session, chat_id: int):
+    return session.query(Chat).filter(id=chat_id).first()
+
+
+def create_chat(session: Session):
+    chat_id = helpers.generate_random_id()
+
+    while get_chat_by_string_id(session=session, chat_id=chat_id):
+        chat_id = helpers.generate_random_id()
+
+    chat = Chat(chat_id=chat_id)
+
+    session.add(chat)
+    session.commit()
+
+    return chat
+
+
+def create_message(session: Session, message: str, chat_id: int, is_output: bool = False, liked: bool = False):
+    chat = get_chat_by_id(session=session, chat_id=chat_id)
+
+    if not chat:
+        chat = create_chat(session=session)
+
+    message = Message(content=message, is_output=is_output, liked=liked, chat_id=chat.id)
+
+    session.add(message)
+    session.commit()
+
+    return message
+

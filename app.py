@@ -20,6 +20,32 @@ CORS(app, origins="*")
 embedding = setup.initialize()
 
 
+@app.route("/text/<int:text_id>", methods=["PATCH"])
+def update_text_status() -> dict:
+    session = database.LocalSession()
+
+    try:
+        text_id = request.json.get("text_id")
+        is_active = request.json.get("is_active")
+
+        text = crud.update_text_active_status(session=session, text_id=text_id, is_active=is_active)
+
+        return {
+            "text": text
+        }
+
+    
+    except Exception as exc:
+        session.rollback()
+
+        return {"error": str(exc)}
+
+    finally:
+        session.close()
+
+    
+
+
 @app.route("/documents", methods=["GET"])
 def get_all_documents() -> dict:
     session = database.LocalSession()

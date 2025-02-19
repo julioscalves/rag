@@ -1,6 +1,8 @@
 import numpy as np
 import hashlib
 import time
+import secrets
+import string
 
 from functools import wraps
 
@@ -53,3 +55,10 @@ def measure_time(func):
         return result
 
     return wrapper
+
+
+def generate_random_id(k=10):
+    chars = string.ascii_letters + string.digits
+    
+    return "".join(secrets.choice(chars) for _ in range(k))
+
