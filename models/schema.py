@@ -48,7 +48,9 @@ class Chat(database.Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     chat_id: Mapped[str] = mapped_column(unique=True, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now())
-    updated_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        server_default=func.now(), onupdate=func.now()
+    )
     messages: Mapped[list["Message"]] = relationship(
         back_populates="chat", cascade="all, delete-orphan"
     )

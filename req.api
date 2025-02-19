@@ -2,13 +2,5 @@ POST http://127.0.0.1:5000/question HTTP/1.1
 content-type: application/json
 
 {
-<<<<<<< HEAD
-<<<<<<< HEAD
-    "query": "e como calcula a média final?"
-=======
     "query": "como calcula a média?"
->>>>>>> e1439f62997c0923c437a8adb9ed2b411dd36ae4
-=======
-    "query": "como calcula a média?"
->>>>>>> 245bdd9b23e9492d1992c44409ec2542ecc2af07
 }

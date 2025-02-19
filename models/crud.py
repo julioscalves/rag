@@ -147,20 +147,6 @@ def get_texts_in_id_list(session: Session, id_list: list[int]) -> list[Text]:
 
 
 @helpers.measure_time
-def update_text_active_status(
-    session: Session, text_id: int, is_active: bool
-) -> Text | None:
-    text = session.query(Text).filter_by(id=text_id).first()
-
-    if not text:
-        return None
-
-    text.is_active = is_active
-
-    return text
-
-
-@helpers.measure_time
 def update_document(
     session: Session,
     document_id: int,
@@ -206,6 +192,7 @@ def update_document(
         document.is_active = is_active
 
     return document
+
 
 @helpers.measure_time
 def delete_texts_by_document_id(session: Session, document_id: int):

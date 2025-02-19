@@ -21,7 +21,7 @@ def text_serializer(text: schema.Text):
         "content": text.content,
         "hash": text.hash,
         "is_active": text.is_active,
-        "embedding": base64.b64encode(text.embedding).decode("utf-8")
-        if text.embedding
-        else None,
+        "embedding": (
+            base64.b64encode(text.embedding).decode("utf-8") if text.embedding else None
+        ),
     }
