@@ -20,11 +20,11 @@ embedding = setup.initialize()
 
 
 @app.route("/document/update/<int:document_id>", methods=["PUT"])
-def update_document_status() -> dict:
+def update_document_status(document_id: int) -> dict:
     session = database.LocalSession()
 
     try:
-        document_id = request.json.get("document_id")
+        document_id = document_id
         filename = request.json.get("filename")
         name = request.json.get("name")
         content = request.json.get("content")
@@ -42,8 +42,9 @@ def update_document_status() -> dict:
 
         if document:
             session.commit()
+            serialized_document = serializers.document_serializer(document)
 
-            return {"document": document}
+            return {"document": serialized_document}
 
         session.rollback()
 
