@@ -8,60 +8,62 @@ from flask_cors import CORS
 import settings
 
 from models import crud, database, serializers
-from services import text_processing, embeddings
+from utils import setup
+
+
 from utils.logging import logger
 
 
 app = Flask(__name__)
 CORS(app, origins="*")
 
-nltk.download("wordnet")
-nltk.download("punkt")
-nltk.download("punkt_tab")
-nltk.download("omw-1.4")
-
-embedding = embeddings.Embeddings(session=database.session)
-wordnet_syn = embeddings.WordnetSyn(lang="por")
-# faiss_index = retrieval.FAISSIndex(session=session, embedder=embedding)
-# graph = retrieval.Graph(session, embedder=embedding)
-
-
-def _setup():
-    from models import database
-
-    session = database.LocalSession()
-
-    database.Base.metadata.create_all(bind=database.engine)
-    data = text_processing.parse_pdfs(session)
-
-    for key in data.keys():
-        embedding.process_data(data[key])
-
-    wordnet_syn._precompute_mapping()
-    # faiss_index.build_index()
-    # graph.build_graph_network()
-
-
-_setup()
+embedding = setup.initialize()
 
 
 @app.route("/documents", methods=["GET"])
-def documents() -> dict:
+def get_all_documents() -> dict:
     session = database.LocalSession()
 
     try:
         documents = crud.get_all_documents(session=session)
-        serialized_documents = [serializers.document_serializer(document) for document in documents]
+        serialized_documents = [
+            serializers.document_serializer(document) for document in documents
+        ]
 
         return {"documents": serialized_documents}
-    
+
     except Exception as exc:
         session.rollback()
 
+        return {"error": str(exc)}
+
+    finally:
+        session.close()
+
+
+@app.route("/document/<int:document_id>")
+def get_text_from_document(document_id: int):
+    session = database.LocalSession()
+
+    try:
+        texts = crud.get_texts_from_document_id(
+            session=session, document_id=document_id
+        )
+        document = crud.get_document_by_id(session=session, document_id=document_id)
+
+        serialized_document = serializers.document_serializer(document)
+        serialized_texts = [serializers.text_serializer(text) for text in texts]
+
         return {
-            "error": str(exc)
+            "document": serialized_document,
+            "texts": serialized_texts
         }
-    
+
+    except Exception as exc:
+        session.rollback()
+
+        return {"error": str(exc)}
+
     finally:
         session.close()
 
@@ -81,7 +83,7 @@ def question() -> dict:
 
     for row in context:
         print(f"\n{row.get('content')} - {row.get('cosine_similarity')}\n\n")
-        prompt += f"\n\n[CONTEXTO]: {row['content']}\nFonte: {row['name']}"
+        prompt += f"\n\n[CONTEXTO]: {row['content']}\nFonte: {row['name']}\nCosine similarity: {row['cosine_similarity']}"
 
     logger.info(f"[Query consolidada]: {prompt}")
 

@@ -10,15 +10,17 @@ def document_serializer(document: schema.Document):
         "name": document.name,
         "hash": document.hash,
         "is_active": document.is_active,
-        "texts": len(document.texts)
+        "texts": len(document.texts),
     }
+
 
 def text_serializer(text: schema.Text):
     return {
         "id": text.id,
-        "document_id": text.document_id,
         "content": text.content,
         "hash": text.hash,
         "is_active": text.is_active,
-        "embedding": base64.b64encode(text.embedding).decode("utf-8") if text.embedding else None
+        "embedding": base64.b64encode(text.embedding).decode("utf-8")
+        if text.embedding
+        else None,
     }

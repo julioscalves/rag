@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey, LargeBinary
+import datetime
+
+from sqlalchemy import ForeignKey, LargeBinary, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models import database
@@ -38,3 +40,33 @@ class Text(database.Base):
 
     def __repr__(self) -> str:
         return f"[{self.document_id}] - [{self.id}]"
+    
+
+class Chat(database.Base):
+    __tablename__ = "chats"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    chat_id: Mapped[str] = mapped_column(unique=True, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(onupdate=func.now())
+    messages: Mapped[list["Message"]] = relationship(back_populates="chat", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"Chat(id={self.id}, chat_id={self.chat_id}, created_at={self.created_at}, updated_at={self.updated_at})"
+    
+
+class Message(database.Base):
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    content: Mapped[str] = mapped_column(nullable=False)
+    timestamp: Mapped[datetime.datetime] = mapped_column(server_default=func.now())
+    is_output: Mapped[bool] = mapped_column(default=False)
+    liked: Mapped[bool] = mapped_column(default=False)
+
+    chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id"))
+    chat: Mapped["Chat"] = relationship(back_populates="messages")
+    
+
+    def __repr__(self) -> str:
+        return f"Message(id={self.id}, content={self.content[:20]}..., timestamp={self.timestamp}, is_output={self.is_output}, chat_id={self.chat_id})"
