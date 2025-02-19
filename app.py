@@ -136,10 +136,15 @@ def get_text_from_document(document_id: int):
 
 @app.route("/question", methods=["POST"])
 def question() -> dict:
+    session = database.LocalSession()
+
     query = request.json.get("query")
+    chat_id = request.json.get("chat_id")
 
     if not query:
-        return {}
+        return {"error": "missing query"}
+
+    chat = crud.get_or_create_chat(session=session, chat_id=chat_id)
 
     prompt = f"Pergunta: {query}"
 
@@ -165,6 +170,17 @@ def question() -> dict:
 
     response = requests.post(url=settings.OLLAMA_ENDPOINT, json=payload)
     response_text = response.json()["response"]
+
     print(response_text)
 
-    return {"response": response_text}
+    crud.create_message(
+        session=session, message=query, chat_id=chat.id, is_output=False
+    )
+    crud.create_message(
+        session=session, message=response_text, chat_id=chat.id, is_output=True
+    )
+
+    chat_id = chat.chat_id
+    session.close()
+
+    return {"response": response_text, "chat_id": chat_id}

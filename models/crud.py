@@ -207,7 +207,7 @@ def update_document(
 
     return document
 
-
+@helpers.measure_time
 def delete_texts_by_document_id(session: Session, document_id: int):
     texts = get_texts_from_document_id(session=session, document_id=document_id)
 
@@ -254,11 +254,11 @@ def get_chat_by_string_id(session: Session, chat_id: str):
 
 @helpers.measure_time
 def get_chat_by_id(session: Session, chat_id: int):
-    return session.query(Chat).filter(id=chat_id).first()
+    return session.query(Chat).filter_by(id=chat_id).first()
 
 
 @helpers.measure_time
-def create_chat(session: Session):
+def create_chat(session: Session) -> Chat:
     chat_id = helpers.generate_random_id()
 
     while get_chat_by_string_id(session=session, chat_id=chat_id):
@@ -273,13 +273,29 @@ def create_chat(session: Session):
 
 
 @helpers.measure_time
+def get_or_create_chat(session: Session, chat_id: int = None) -> Chat:
+    chat = None
+
+    if chat_id and type(chat_id) == str:
+        chat = get_chat_by_string_id(session=session, chat_id=chat_id)
+
+    elif chat_id and type(chat_id) == int:
+        chat = get_chat_by_id(session=session, chat_id=chat_id)
+
+    if not chat:
+        chat = create_chat(session=session)
+
+    return chat
+
+
+@helpers.measure_time
 def create_message(
     session: Session,
     message: str,
     chat_id: int,
     is_output: bool = False,
     liked: bool = False,
-):
+) -> Message:
     chat = get_chat_by_id(session=session, chat_id=chat_id)
 
     if not chat:
