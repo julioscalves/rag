@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from models.schema import Document, Text, Chat, Message
 
+from services import embeddings
+
 from utils import helpers
 
 
@@ -158,14 +160,104 @@ def update_text_active_status(
     return text
 
 
+@helpers.measure_time
+def update_document(
+    session: Session,
+    document_id: int,
+    filename: str = None,
+    name: str = None,
+    content: str = None,
+    is_active: bool = None,
+    embedding_model: embeddings.Embeddings = None,
+):
+    document = get_document_by_id(session=session, document_id=document_id)
+
+    if not document:
+        return None
+
+    if filename:
+        document.filename = filename
+
+    if name:
+        document.name = name
+
+    if content:
+        document.content = content
+        document.hash = helpers.generate_hash_from_string(content)
+
+        delete_texts_by_document_id(session=session, document_id=document_id)
+
+        text_chunks = embedding_model.generate_chunks()
+        text_embeddings = embedding_model.generate_embeddings(text_chunks)
+
+        new_data = [
+            {
+                "document_id": document_id,
+                "content": chunk,
+                "hash": helpers.generate_hash_from_string(chunk),
+                "embedding": embedding.tobytes(),
+            }
+            for chunk, embedding in zip(text_chunks, text_embeddings)
+        ]
+
+        session.bulk_insert_mappings(Text, new_data)
+
+    if is_active is not None:
+        document.is_active = is_active
+
+    return document
+
+
+def delete_texts_by_document_id(session: Session, document_id: int):
+    texts = get_texts_from_document_id(session=session, document_id=document_id)
+
+    if not texts:
+        return 0
+
+    delete_count = 0
+    for text in texts:
+        delete_count += 1
+        session.delete(text)
+
+    session.commit()
+    return delete_count
+
+
+@helpers.measure_time
+def update_text(
+    session: Session,
+    text_id: int,
+    content: str = None,
+    is_active: bool = None,
+    embedding_model: embeddings.Embeddings = None,
+):
+    text = get_text_by_id(session=session, text_id=text_id)
+
+    if not text:
+        return None
+
+    if content:
+        text.content = content
+        text.hash = helpers.generate_hash_from_string(content)
+        text.embedding = embedding_model.model.encode(content)
+
+    if is_active is not None:
+        text.is_active = is_active
+
+    return text
+
+
+@helpers.measure_time
 def get_chat_by_string_id(session: Session, chat_id: str):
     return session.query(Chat).filter_by(chat_id=chat_id).first()
 
 
+@helpers.measure_time
 def get_chat_by_id(session: Session, chat_id: int):
     return session.query(Chat).filter(id=chat_id).first()
 
 
+@helpers.measure_time
 def create_chat(session: Session):
     chat_id = helpers.generate_random_id()
 
@@ -180,16 +272,24 @@ def create_chat(session: Session):
     return chat
 
 
-def create_message(session: Session, message: str, chat_id: int, is_output: bool = False, liked: bool = False):
+@helpers.measure_time
+def create_message(
+    session: Session,
+    message: str,
+    chat_id: int,
+    is_output: bool = False,
+    liked: bool = False,
+):
     chat = get_chat_by_id(session=session, chat_id=chat_id)
 
     if not chat:
         chat = create_chat(session=session)
 
-    message = Message(content=message, is_output=is_output, liked=liked, chat_id=chat.id)
+    message = Message(
+        content=message, is_output=is_output, liked=liked, chat_id=chat.id
+    )
 
     session.add(message)
     session.commit()
 
     return message
-

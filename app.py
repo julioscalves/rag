@@ -1,4 +1,3 @@
-import nltk
 import requests
 
 from flask import Flask
@@ -15,26 +14,41 @@ from utils.logging import logger
 
 
 app = Flask(__name__)
-CORS(app, origins="*")
+CORS(app, origins=["http://localhost:3000", "http://10.10.10.101:3000"])
 
 embedding = setup.initialize()
 
 
-@app.route("/text/<int:text_id>", methods=["PATCH"])
-def update_text_status() -> dict:
+@app.route("/document/update/<int:document_id>", methods=["PUT"])
+def update_document_status() -> dict:
     session = database.LocalSession()
 
     try:
-        text_id = request.json.get("text_id")
+        document_id = request.json.get("document_id")
+        filename = request.json.get("filename")
+        name = request.json.get("name")
+        content = request.json.get("content")
         is_active = request.json.get("is_active")
 
-        text = crud.update_text_active_status(session=session, text_id=text_id, is_active=is_active)
+        document = crud.update_document(
+            session=session,
+            document_id=document_id,
+            filename=filename,
+            name=name,
+            content=content,
+            is_active=is_active,
+            embedding_model=embedding,
+        )
 
-        return {
-            "text": text
-        }
+        if document:
+            session.commit()
 
-    
+            return {"document": document}
+
+        session.rollback()
+
+        return {"error": "document not found"}
+
     except Exception as exc:
         session.rollback()
 
@@ -43,7 +57,36 @@ def update_text_status() -> dict:
     finally:
         session.close()
 
-    
+
+@app.route("/text/<int:text_id>", methods=["PUT"])
+def update_text_status() -> dict:
+    session = database.LocalSession()
+
+    try:
+        text_id = request.json.get("text_id")
+        content = request.json.get("content")
+        is_active = request.json.get("is_active")
+
+        text = crud.update_text_active_status(
+            session=session,
+            text_id=text_id,
+            is_active=is_active,
+            content=content,
+            embedding=embedding,
+        )
+
+        if text:
+            session.commit()
+
+            return {"text": text}
+
+    except Exception as exc:
+        session.rollback()
+
+        return {"error": str(exc)}
+
+    finally:
+        session.close()
 
 
 @app.route("/documents", methods=["GET"])
@@ -80,10 +123,7 @@ def get_text_from_document(document_id: int):
         serialized_document = serializers.document_serializer(document)
         serialized_texts = [serializers.text_serializer(text) for text in texts]
 
-        return {
-            "document": serialized_document,
-            "texts": serialized_texts
-        }
+        return {"document": serialized_document, "texts": serialized_texts}
 
     except Exception as exc:
         session.rollback()

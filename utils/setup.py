@@ -31,7 +31,6 @@ def get_wordnet_syn_service(wordnet_syn):
     return wordnet_syn
 
 
-
 def initialize():
     from models import database
 
@@ -39,9 +38,9 @@ def initialize():
 
     session = database.LocalSession()
     data = text_processing.parse_pdfs(session=session)
-    
+
     embedding = get_embedding_service(None)
-    
+
     for key in data.keys():
         embedding.process_data(data[key])
 
@@ -50,7 +49,3 @@ def initialize():
     # wordnet_syn._precompute_mapping()
     # faiss_index.build_index()
     # graph.build_graph_network()
-
-    
-        
-

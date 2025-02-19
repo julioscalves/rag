@@ -40,7 +40,7 @@ class Text(database.Base):
 
     def __repr__(self) -> str:
         return f"[{self.document_id}] - [{self.id}]"
-    
+
 
 class Chat(database.Base):
     __tablename__ = "chats"
@@ -49,11 +49,13 @@ class Chat(database.Base):
     chat_id: Mapped[str] = mapped_column(unique=True, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(onupdate=func.now())
-    messages: Mapped[list["Message"]] = relationship(back_populates="chat", cascade="all, delete-orphan")
+    messages: Mapped[list["Message"]] = relationship(
+        back_populates="chat", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"Chat(id={self.id}, chat_id={self.chat_id}, created_at={self.created_at}, updated_at={self.updated_at})"
-    
+
 
 class Message(database.Base):
     __tablename__ = "messages"
@@ -66,7 +68,6 @@ class Message(database.Base):
 
     chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id"))
     chat: Mapped["Chat"] = relationship(back_populates="messages")
-    
 
     def __repr__(self) -> str:
         return f"Message(id={self.id}, content={self.content[:20]}..., timestamp={self.timestamp}, is_output={self.is_output}, chat_id={self.chat_id})"

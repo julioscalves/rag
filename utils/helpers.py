@@ -59,6 +59,5 @@ def measure_time(func):
 
 def generate_random_id(k=10):
     chars = string.ascii_letters + string.digits
-    
-    return "".join(secrets.choice(chars) for _ in range(k))
 
+    return "".join(secrets.choice(chars) for _ in range(k))
