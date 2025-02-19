@@ -9,6 +9,7 @@ def document_serializer(document: schema.Document):
         "filename": document.filename,
         "name": document.name,
         "hash": document.hash,
+        "content": document.content,
         "is_active": document.is_active,
         "texts": len(document.texts),
     }

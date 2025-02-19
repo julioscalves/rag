@@ -14,7 +14,7 @@ from utils.logging import logger
 
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", "http://10.10.10.101:3000"])
+CORS(app, origins="*")
 
 embedding = setup.initialize()
 
