@@ -7,7 +7,7 @@ from flask_cors import CORS
 
 import settings
 
-from models.database import session
+from models import crud, database, serializers
 from services import text_processing, embeddings
 from utils.logging import logger
 
@@ -20,7 +20,7 @@ nltk.download("punkt")
 nltk.download("punkt_tab")
 nltk.download("omw-1.4")
 
-embedding = embeddings.Embeddings(session=session)
+embedding = embeddings.Embeddings(session=database.session)
 wordnet_syn = embeddings.WordnetSyn(lang="por")
 # faiss_index = retrieval.FAISSIndex(session=session, embedder=embedding)
 # graph = retrieval.Graph(session, embedder=embedding)
@@ -28,6 +28,8 @@ wordnet_syn = embeddings.WordnetSyn(lang="por")
 
 def _setup():
     from models import database
+
+    session = database.LocalSession()
 
     database.Base.metadata.create_all(bind=database.engine)
     data = text_processing.parse_pdfs(session)
@@ -41,6 +43,27 @@ def _setup():
 
 
 _setup()
+
+
+@app.route("/documents", methods=["GET"])
+def documents() -> dict:
+    session = database.LocalSession()
+
+    try:
+        documents = crud.get_all_documents(session=session)
+        serialized_documents = [serializers.document_serializer(document) for document in documents]
+
+        return {"documents": serialized_documents}
+    
+    except Exception as exc:
+        session.rollback()
+
+        return {
+            "error": str(exc)
+        }
+    
+    finally:
+        session.close()
 
 
 @app.route("/question", methods=["POST"])

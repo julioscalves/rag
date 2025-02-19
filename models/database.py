@@ -26,3 +26,7 @@ session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=en
 
 Base = declarative_base()
 Base.query = session.query_property()
+
+
+def LocalSession():
+    return session()
