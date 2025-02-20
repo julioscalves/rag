@@ -17,7 +17,7 @@ def parse_pdfs(
     session: Session, path: str = os.path.join(os.getcwd(), "data"), skip: int = 0
 ) -> dict:
     existing_documents = {
-        document.hash: document for document in crud.get_all_documents(session)
+        document.file_hash: document for document in crud.get_all_documents(session)
     }
     current_hashes = set()
     data = {}
@@ -58,7 +58,8 @@ def parse_pdfs(
             "filename": filename,
             "name": filename,
             "document_id": document.id,
-            "hash": file_hash,
+            "file_hash": file_hash,
+            "content_hash": file_hash,
             "content": content,
         }, file_hash
 

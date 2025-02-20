@@ -19,8 +19,8 @@ CORS(app, origins="*")
 embedding = setup.initialize()
 
 
-@app.route("/document/update/<int:document_id>", methods=["PUT"])
-def update_document_status(document_id: int) -> dict:
+@app.route("/document/update/", methods=["PUT"])
+def update_document_status() -> dict:
     session = database.LocalSession()
 
     try:

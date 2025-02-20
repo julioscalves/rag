@@ -17,11 +17,14 @@ def create_document(
     content: str,
     is_active: bool = True,
 ) -> Document:
-    document_hash = helpers.generate_hash_from_file(filepath)
+    file_hash = helpers.generate_hash_from_file(filepath)
+    content_hash = helpers.generate_hash_from_string(content)
+
     document = Document(
         filename=filename,
         name=document_name,
-        hash=document_hash,
+        file_hash=file_hash,
+        content_hash=content_hash,
         content=content,
         is_active=is_active,
     )
@@ -60,6 +63,55 @@ def get_all_document_hashes(session: Session) -> set[str] | set:
         return set(query)
 
     return set()
+
+
+@helpers.measure_time
+def update_document(
+    session: Session,
+    document_id: int,
+    filename: str = None,
+    name: str = None,
+    content: str = None,
+    is_active: bool = None,
+    embedding_model: embeddings.Embeddings = None,
+):
+    document = get_document_by_id(session=session, document_id=document_id)
+
+    if not document:
+        return None
+
+    if filename:
+        document.filename = filename
+
+    if name:
+        document.name = name
+
+    if content:
+        document.content = content
+        document.content_hash = helpers.generate_hash_from_string(content)
+
+        delete_texts_by_document_id(session=session, document_id=document_id)
+
+        text_chunks = embedding_model.generate_chunks()
+        text_embeddings = embedding_model.generate_embeddings(text_chunks)
+
+        new_data = [
+            {
+                "document_id": document_id,
+                "content": chunk,
+                "file_hash": document.file_hash,
+                "content_hash": helpers.generate_hash_from_string(chunk),
+                "embedding": embedding.tobytes(),
+            }
+            for chunk, embedding in zip(text_chunks, text_embeddings)
+        ]
+
+        session.bulk_insert_mappings(Text, new_data)
+
+    if is_active is not None:
+        document.is_active = is_active
+
+    return document
 
 
 @helpers.measure_time
@@ -192,7 +244,6 @@ def update_document(
         document.is_active = is_active
 
     return document
-
 
 @helpers.measure_time
 def delete_texts_by_document_id(session: Session, document_id: int):
