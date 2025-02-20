@@ -1,9 +1,10 @@
 import base64
+import json
 import os
 
 import requests
 
-from flask import Flask
+from flask import Flask, Response, stream_with_context
 from flask.globals import request
 from flask_cors import CORS
 
@@ -244,3 +245,59 @@ def question() -> dict:
     session.close()
 
     return {"response": response_text, "chat_id": chat_id}
+
+
+@app.route(f"/{settings.API_VERSION}/chat", methods=["POST"])
+def chat() -> dict:
+    session = database.LocalSession()
+    query = request.json.get("query")
+
+    chat_id = request.json.get("chat_id")
+    chat = crud.get_or_create_chat(session=session, chat_id=chat_id)
+
+    prompt = f"Mensagem: {query}"
+    context = embedding.retrieve(query, top_k=5, rerank=True)
+
+    for row in context:
+        prompt += f"\n\n[CONTEXTO]: {row['content']}\nFonte: {row['name']}\nCosine similarity: {row['cosine_similarity']}"
+
+    payload = {
+        "model": settings.OLLAMA_MODEL,
+        "system": settings.OLLAMA_SYSTEM_PROMPT,
+        "prompt": prompt,
+        "options": settings.OLLAMA_PARAMETERS,
+        "stream": True,
+    }
+
+    response = requests.post(url=settings.OLLAMA_ENDPOINT, json=payload, stream=True)
+    response_text = ""
+
+    def generate():
+        nonlocal response_text
+
+        try:
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        chunk = json.loads(line.decode("utf-8"))
+                    except json.JSONDecodeError:
+                        continue
+
+                    token = chunk.get("response", "")
+                    response_text += token
+
+                    yield f"data: {token}\n\n"
+
+        finally:
+            crud.create_message(
+                session=session, message=query, chat_id=chat.id, is_output=False
+            )
+            crud.create_message(
+                session=session,
+                message=response_text,
+                chat_id=chat.id,
+                is_output=True,
+            )
+            session.close()
+
+    return Response(stream_with_context(generate()), mimetype="text/event-stream")
