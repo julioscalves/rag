@@ -48,7 +48,8 @@ def upload_document() -> dict:
     except Exception as exc:
         return {"error": f"failed to decode file content: {str(exc)}"}
 
-    file_destination = os.path.join(settings.UPLOAD_FOLDER, filename)
+    current_dir = os.path.join(os.getcwd(), settings.UPLOAD_FOLDER)
+    file_destination = os.path.join(current_dir, filename)
 
     try:
         with open(file_destination, "wb") as file:
