@@ -1,5 +1,7 @@
 CHUNK_SIZE = 512
 
+API_VERSION = "v0"
+
 DB_FILENAME = "documents.db"
 
 ENABLE_PERF_LOGGING = True

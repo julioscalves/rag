@@ -23,7 +23,7 @@ CORS(app, origins="*")
 embedding = setup.initialize()
 
 
-@app.route("/document/upload/", methods=["POST"])
+@app.route(f"/{settings.API_VERSION}/document/upload/", methods=["POST"])
 def upload_document() -> dict:
     session = database.LocalSession()
     data = request.get_json()
@@ -74,8 +74,8 @@ def upload_document() -> dict:
     return {"message": "File save successfully!"}
 
 
-@app.route("/document/update/", methods=["PUT"])
-def update_document_status() -> dict:
+@app.route(f"/{settings.API_VERSION}/document/update/", methods=["PUT"])
+def update_document() -> dict:
     session = database.LocalSession()
 
     try:
@@ -114,8 +114,29 @@ def update_document_status() -> dict:
         session.close()
 
 
-@app.route("/text/<int:text_id>", methods=["PUT"])
-def update_text_status() -> dict:
+@app.route(f"/{settings.API_VERSION}/documents", methods=["GET"])
+def get_all_documents() -> dict:
+    session = database.LocalSession()
+
+    try:
+        documents = crud.get_all_documents(session=session)
+        serialized_documents = [
+            serializers.document_serializer(document) for document in documents
+        ]
+
+        return {"documents": serialized_documents}
+
+    except Exception as exc:
+        session.rollback()
+
+        return {"error": str(exc)}
+
+    finally:
+        session.close()
+
+
+@app.route(f"/{settings.API_VERSION}/text/", methods=["PUT"])
+def update_text() -> dict:
     session = database.LocalSession()
 
     try:
@@ -145,30 +166,13 @@ def update_text_status() -> dict:
         session.close()
 
 
-@app.route("/documents", methods=["GET"])
-def get_all_documents() -> dict:
+@app.route(f"/{settings.API_VERSION}/document/texts")
+def get_text_from_document():
     session = database.LocalSession()
+    document_id = request.json.get("document_id")
 
-    try:
-        documents = crud.get_all_documents(session=session)
-        serialized_documents = [
-            serializers.document_serializer(document) for document in documents
-        ]
-
-        return {"documents": serialized_documents}
-
-    except Exception as exc:
-        session.rollback()
-
-        return {"error": str(exc)}
-
-    finally:
-        session.close()
-
-
-@app.route("/document/<int:document_id>")
-def get_text_from_document(document_id: int):
-    session = database.LocalSession()
+    if not document_id:
+        return {"error": "missing document id"}
 
     try:
         texts = crud.get_texts_from_document_id(
@@ -190,7 +194,7 @@ def get_text_from_document(document_id: int):
         session.close()
 
 
-@app.route("/question", methods=["POST"])
+@app.route(f"/{settings.API_VERSION}/question", methods=["POST"])
 def question() -> dict:
     session = database.LocalSession()
 
