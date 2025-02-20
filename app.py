@@ -1,3 +1,6 @@
+import base64
+import os
+
 import requests
 
 from flask import Flask
@@ -6,6 +9,7 @@ from flask_cors import CORS
 
 import settings
 
+from services import text_processing
 from models import crud, database, serializers
 from utils import setup
 
@@ -19,12 +23,62 @@ CORS(app, origins="*")
 embedding = setup.initialize()
 
 
+@app.route("/document/upload/", methods=["POST"])
+def upload_document() -> dict:
+    session = database.LocalSession()
+    data = request.get_json()
+
+    if not data:
+        return {"error": "missing file"}
+
+    filename = data.get("filename")
+    name = data.get("name")
+    content_base64 = data.get("content")
+    filetype = data.get("filetype")
+
+    if not filetype:
+        return {"error": "unknown file type"}
+
+    if not content_base64:
+        return {"error": "missing content"}
+
+    try:
+        file_content = base64.b64decode(content_base64)
+
+    except Exception as exc:
+        return {"error": f"failed to decode file content: {str(exc)}"}
+
+    file_destination = os.path.join(settings.UPLOAD_FOLDER, filename)
+
+    try:
+        with open(file_destination, "wb") as file:
+            file.write(file_content)
+
+    except Exception as exc:
+        return {"error": f"failed to save file: {str(exc)}"}
+
+    try:
+        data = text_processing.parse_upload_file(
+            session=session,
+            filename=filename,
+            name=name,
+            content=file_content,
+            filepath=file_destination,
+        )
+        embedding.process_data(data)
+
+    except Exception as exc:
+        return {"error": f"failed processing the file: {str(exc)}"}
+
+    return {"message": "File save successfully!"}
+
+
 @app.route("/document/update/", methods=["PUT"])
 def update_document_status() -> dict:
     session = database.LocalSession()
 
     try:
-        document_id = document_id
+        document_id = request.json.get("document_id")
         filename = request.json.get("filename")
         name = request.json.get("name")
         content = request.json.get("content")

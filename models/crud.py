@@ -92,7 +92,7 @@ def update_document(
 
         delete_texts_by_document_id(session=session, document_id=document_id)
 
-        text_chunks = embedding_model.generate_chunks()
+        text_chunks = embedding_model.generate_chunks(content)
         text_embeddings = embedding_model.generate_embeddings(text_chunks)
 
         new_data = [
@@ -225,7 +225,7 @@ def update_document(
 
         delete_texts_by_document_id(session=session, document_id=document_id)
 
-        text_chunks = embedding_model.generate_chunks()
+        text_chunks = embedding_model.generate_chunks(content)
         text_embeddings = embedding_model.generate_embeddings(text_chunks)
 
         new_data = [
@@ -244,6 +244,7 @@ def update_document(
         document.is_active = is_active
 
     return document
+
 
 @helpers.measure_time
 def delete_texts_by_document_id(session: Session, document_id: int):

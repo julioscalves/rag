@@ -1,6 +1,7 @@
 import nltk
 
 from services import text_processing
+from utils import helpers
 
 
 def download_nltk_data():

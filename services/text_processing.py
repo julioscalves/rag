@@ -13,6 +13,7 @@ from utils import helpers
 from utils.logging import logger
 
 
+@helpers.measure_time
 def parse_pdfs(
     session: Session, path: str = os.path.join(os.getcwd(), "data"), skip: int = 0
 ) -> dict:
@@ -82,10 +83,11 @@ def parse_pdfs(
     return data
 
 
+@helpers.measure_time
 def extract_text_from_pdf(pdf_path: str, skip: int = 0) -> str:
-    file_path = Path(pdf_path)
+    filepath = Path(pdf_path)
 
-    if not file_path.exists():
+    if not filepath.exists():
         logger.error(f"File not found: {pdf_path}")
         return ""
 
@@ -121,3 +123,36 @@ def extract_text_from_pdf(pdf_path: str, skip: int = 0) -> str:
     except Exception as exc:
         logger.error(f"[{str(exc)}] @ {pdf_path} - skipping file...", exc_info=True)
         return ""
+
+
+@helpers.measure_time
+def parse_upload_file(
+    session: Session, filename: str, name: str, content: str, filepath: str
+):
+    existing_documents = {
+        document.file_hash: document for document in crud.get_all_documents(session)
+    }
+    file_hash = helpers.generate_hash_from_file(filepath=filepath)
+
+    if file_hash in existing_documents:
+        logger.info(f"skipping [{filepath}] since it is already in the database")
+
+        return
+
+    document = crud.create_document(
+        session=session,
+        filepath=filepath,
+        filename=filename,
+        document_name=name,
+        content=content,
+    )
+    data = {
+        "filename": filename,
+        "name": filename,
+        "document_id": document.id,
+        "file_hash": file_hash,
+        "content_hash": file_hash,
+        "content": content,
+    }
+
+    return data

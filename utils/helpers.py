@@ -11,16 +11,16 @@ import settings
 from utils.logging import logger
 
 
-def generate_hash_from_file(file_path: str) -> str:
+def generate_hash_from_file(filepath: str) -> str:
     hash_object = hashlib.sha256()
 
     try:
-        with open(file_path, "rb") as f:
+        with open(filepath, "rb") as f:
             for chunk in iter(lambda: f.read(131072), b""):
                 hash_object.update(chunk)
 
     except FileNotFoundError as exc:
-        raise FileNotFoundError(f"File not found: {file_path}") from exc
+        raise FileNotFoundError(f"File not found: {filepath}") from exc
 
     return hash_object.hexdigest()
 
